@@ -3,9 +3,12 @@
 import argparse
 import os
 import textwrap
+import pysat
 
 from pysat.formula import CNF
 from pysat.solvers import Minisat22
+
+pysat.params['data_dirs'] = ['/home/annemerel/pysatData']
 
 # predicate map:
 # open  : -
