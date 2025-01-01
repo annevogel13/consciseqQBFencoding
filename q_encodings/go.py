@@ -16,7 +16,8 @@ rules to encode :
 
 !! can a encoding file have both blackwins and whitewins ? 
 """
-
+#TODO make a logical order for the function in the class GoQBF
+#TODO check if it is possible to regroup attributes of the class GoQBF, grouping them in seperate objects 
 
 class GoQBF:
     """Class to encode the game of Go as a QBF
@@ -128,7 +129,8 @@ class GoQBF:
                     liberty_var = self.liberty_variables[t][pos]
                     self.gates_generator.or_gate(adj_empty_vars + [liberty_var])
 
-    def encode_capture_rules(self):
+    #TODO add the t parameter 
+    def encode_capture_rules(self, t):
         """
         Encodes capture rules for each position at each turn.
         A stone is captured if all its liberties are occupied by the opponent.
@@ -202,8 +204,81 @@ class GoQBF:
         # Append all clauses to the encoding
         self.encoding.extend(initial_clauses)
 
+    def encode_stone_placement(self, t):
+        """
+        Encodes the rule that stones can only be placed on empty positions.
+        """
+        for pos in range(self.num_positions):
+            empty_curr = self.position_states["empty"][t][pos]
+            black_next = self.position_states["black"][t + 1][pos]
+            white_next = self.position_states["white"][t + 1][pos]
+
+            # If the position is empty, it cannot become both Black and White
+            self.gates_generator.if_then_gate(
+                empty_curr,
+                -(black_next + white_next),
+            )
+
+    def encode_state_retention(self, t):
+        """
+        Encodes the rule that stones retain their state if not captured.
+        """
+        for color in ["black", "white"]:
+            for pos in range(self.num_positions):
+                curr_state = self.position_states[color][t][pos]
+                next_state = self.position_states[color][t + 1][pos]
+
+                # Retain stones of the current color
+                self.gates_generator.if_then_gate(
+                    curr_state,
+                    next_state,
+                )
+
+    #TODO check if this is the most efficient way of checking this 
+    def prevent_repeated_board_state(self, t):
+        '''
+        Ko rule: Prevents repeating the previous board state.
+        '''
+        for k in range(t + 1):  # Compare with all previous turns
+            same_state_vars = []
+            for pos in range(self.num_positions):
+                # Compare Black stones
+                black_t = self.position_states["black"][k][pos]
+                black_t1 = self.position_states["black"][t + 1][pos]
+               # same_state_vars.append(self.gates_generator.iff_gate(black_t, black_t1))
+
+                # Compare White stones
+                white_t = self.position_states["white"][k][pos]
+                white_t1 = self.position_states["white"][t + 1][pos]
+               # same_state_vars.append(self.gates_generator.iff_gate(white_t, white_t1))
+
+                # Compare Empty positions
+                empty_t = self.position_states["empty"][k][pos]
+                empty_t1 = self.position_states["empty"][t + 1][pos]
+              #  same_state_vars.append(self.gates_generator.iff_gate(empty_t, empty_t1))
+
+            # Combine all "same state" conditions for this comparison into a single gate
+            same_state_gate = self.encoding_variables.get_vars(1)[0]
+            self.gates_generator.and_gate(same_state_vars + [same_state_gate])
+
+            # Prevent the next state from matching this previous state
+            #self.gates_generator.not_gate(same_state_gate)
+
+
     def generate_transition_rules(self):
-        pass
+        """
+        Encodes the rules governing state transitions between turns.
+        This function calls individual rule encoding functions for:
+        - Stone placement
+        - Capture rules
+        - State retention
+        - Ko Rule (prevent repeated board state)
+        """
+        for t in range(self.num_turns - 1):
+            self.encode_stone_placement(t)
+            self.encode_capture_rules(t)
+            self.encode_state_retention(t)
+            self.prevent_repeated_board_state(t)
 
     def generate_goal_state(self):
         """
@@ -294,7 +369,7 @@ class GoQBF:
 
         # update functions
         self.encode_liberties()
-        self.encode_capture_rules()
+        #self.encode_capture_rules()
 
         # Move variables (one per move)
         self.move_variables = self.encode_variables(self.num_position_variables, 1)
