@@ -48,6 +48,7 @@ if __name__ == '__main__':
                                   ew = explicit goal witness based
                                   iw = iteratice squaring witness based
                                   ttt = tictactoe
+                                  go = go
                                   cp = compact positional (ungrounded)
                                   cgcp = compact goal compact positional
                                   ntpg = path based goal, without transition function
@@ -61,6 +62,7 @@ if __name__ == '__main__':
                                   games (for specific optimizations):
                                   hex = hex game
                                   ttt = tic-tac-toe
+                                  go = go
                                   gomuku = gomuku
                                   general = general game, for index based (default)'''),default = 'hex')
   parser.add_argument("--goal_length", help="Goal line length for games such as tic-tac-toe and gomuku, default 3", type=int,default = 3)

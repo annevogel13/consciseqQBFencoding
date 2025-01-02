@@ -2,10 +2,18 @@
 """
 
 import math
+import numpy as np
 from utils.gates import GatesGen as ggen
 from utils.variables_dispatcher import VarDispatcher as vd
 
 """
+QBF encoding in qdmicas format for the game of Go
+
+TODO
+- problem line 
+- quantifier blocks 
+- CNF clauses 
+
 rules to encode : 
 1. Turn alternation 
 2. Placement rules (stones only placed on empty itnersections )
@@ -50,20 +58,25 @@ class GoQBF:
             raise ValueError("Field 'positions' is missing.")
 
         # Check blackinitials and whiteinitials
-        if hasattr(self.parsed, "blackinitials") and hasattr(
-            self.parsed, "whiteinitials"
+        if (
+            self.parsed_info["blackinitials"] is not None
+            and self.parsed_info["whiteinitials"] is not None
         ):
-            black_initials = set(self.parsed.blackinitials)
-            white_initials = set(self.parsed.whiteinitials)
+            self.black_initials = set(
+                np.array(self.parsed_info["blackinitials"]).flatten().tolist()
+            )
+            self.white_initials = set(
+                np.array(self.parsed_info["whiteinitials"]).flatten().tolist()
+            )
             # the set intersection operator
-            overlap = black_initials & white_initials
+            overlap = self.black_initials & self.white_initials
             if overlap:
                 raise ValueError(
                     f"Overlap detected between blackinitials and whiteinitials: {overlap}"
                 )
 
-            invalid_black_initials = black_initials - set(self.parsed.positions)
-            invalid_white_initials = white_initials - set(self.parsed.positions)
+            invalid_black_initials = self.black_initials - set(self.parsed.positions)
+            invalid_white_initials = self.white_initials - set(self.parsed.positions)
             if invalid_black_initials:
                 raise ValueError(
                     f"Invalid blackinitials not in positions: {invalid_black_initials}"
@@ -72,20 +85,23 @@ class GoQBF:
                 raise ValueError(
                     f"Invalid whiteinitials not in positions: {invalid_white_initials}"
                 )
+        else:
+            raise ValueError("Field 'blackinitials' or 'whiteinitials' is missing.")
 
         # Check times
-        if hasattr(self.parsed, "times"):
-            if not self.parsed.times:
-                raise ValueError("No times provided.")
-            if len(self.parsed.times) < 1:
-                raise ValueError("At least one time step is required.")
-        else:
-            raise ValueError("Field 'times' is missing.")
+        if not self.parsed_info["times"]:
+            raise ValueError("No times provided.")
+        if len(self.parsed_info["times"]) < 1:
+            raise ValueError("At least one time step is required.")
 
+        self.times = set(np.array(self.parsed_info["times"]).flatten().tolist())
         # Check blackturns
-        if hasattr(self.parsed, "blackturns"):
+        if self.parsed_info["blackturns"] is not None:
+            self.blackturns = set(
+                np.array(self.parsed_info["blackturns"]).flatten().tolist()
+            )
             # - is the set operator for difference
-            invalid_black_turns = set(self.parsed.blackturns) - set(self.parsed.times)
+            invalid_black_turns = self.blackturns - self.times
             if invalid_black_turns:
                 raise ValueError(
                     f"Invalid blackturns not in times: {invalid_black_turns}"
@@ -94,11 +110,12 @@ class GoQBF:
             raise ValueError("Field 'blackturns' is missing.")
 
         # Check if 'blackwins' exists
-        if not hasattr(self.parsed, "blackwins"):
+        if self.parsed_info["blackwins"] is None:
             raise ValueError("Field 'blackwins' is missing in the parsed input.")
 
+        self.blackwins = np.array(self.parsed_info["blackwins"])
         # Validate each win condition
-        for win_condition in self.parsed.blackwins:
+        for win_condition in self.blackwins:
             invalid_positions = set(win_condition) - set(self.parsed.positions)
             if invalid_positions:
                 raise ValueError(f"Invalid positions in blackwins: {invalid_positions}")
@@ -118,43 +135,26 @@ class GoQBF:
     def generate_quantifier_blocks(self):
         """Function that generates the quanitifier blocks (step1)
         Step-by-step breakdown :
-        1. move variables
-        2. position variables
-        3. liberty variables
-        4. state transition variables
-        5. additional game-specific variables
+        1. Existential quantifiers for moves
+        2. Existential quantifiers for liberties
+        3. Universal quantifiers for positions
         """
 
-        # 1. move variables
-        self.quantifier_block.append(["# Move variables: "])
-        for t in range(self.parsed.depth):
-            self.quantifier_block.append(self.move_variables[t])
+        # 1. Existential quantifiers for moves
+        move_vars = [var for sublist in self.move_variables for var in sublist]
+        self.existential_vars.extend(move_vars)
 
-        # 2. position variables (3 per position)
-        self.quantifier_block.append(["# Position variables: "])
+        # 2. Universal quantifiers for positions
+        position_vars = []
         for state in ["black", "white", "empty"]:
             for t in range(self.parsed.depth):
-                self.quantifier_block.append(
-                    [
-                        "exists("
-                        + ", ".join(str(x) for x in self.position_states[state][t])
-                        + ")"
-                    ]
-                )
+                position_vars.extend(self.position_states[state][t])
 
-        # 3. Liberty variables (empty adjacent positions) for each position:
-        self.quantifier_block.append(["# Liberty variables: "])
-        for t in range(self.parsed.depth):
-            self.quantifier_block.append(
-                ["exists(" + ", ".join(str(x) for x in self.liberty_variables[t]) + ")"]
-            )
+        self.universal_vars.extend(position_vars)
 
-        # 4. State transition variables:
-        self.quantifier_block.append(["# State transitions: "])
-        self.encode_variables(self.num_positions, 1, self.quantifier_block)
-
-        if self.parsed.args.debug == 1:
-            print("Quantifier blocks: ", self.quantifier_block)
+        # 3. Existential quantifiers for liberties
+        liberty_vars = [var for sublist in self.liberty_variables for var in sublist]
+        self.existential_vars.extend(liberty_vars)
 
     def get_adjacent_positions(self, pos):
         """
@@ -295,12 +295,12 @@ class GoQBF:
         # Ensure that the initial positions are within the board size
 
         for pos in range(self.num_positions):
-            if pos in self.parsed.initial_black_positions:
+            if pos in self.parsed_info["blackinitials"]:
                 # If position is in the initial Black positions
                 black_var = self.position_states["black"][0][pos]
                 initial_clauses.append(f"{black_var} 0")  # Set to Black
 
-            elif pos in self.parsed.initial_white_positions:
+            elif pos in self.parsed_info["whiteinitials"]:
                 # If position is in the initial White positions
                 white_var = self.position_states["white"][0][pos]
                 initial_clauses.append(f"{white_var} 0")  # Set to White
@@ -319,8 +319,10 @@ class GoQBF:
             )
 
         # Append all clauses to the encoding
-        self.encoding.extend(initial_clauses)
+        # TODO replace this is wrong
+        self.quantifier_block.extend(initial_clauses)
 
+    # check
     def encode_stone_placement(self, t):
         """
         Encodes the rule that stones can only be placed on empty positions.
@@ -384,7 +386,7 @@ class GoQBF:
         self.not_gate(board_same_gate)
 
         # Append the constraint to ensure the board state is not repeated
-        self.encoding.append(f"-{not_board_same_gate} 0")
+        self.quantifier_block.append(f"-{not_board_same_gate} 0")
 
     def generate_transition_rules(self):
         """
@@ -405,12 +407,11 @@ class GoQBF:
         """
         Encodes the goal state based on the parsed input.
         - If the goal depends on `#blackwins`, encode multiple conditions for Black to win.
-
         """
 
         # Process each win condition and store gates for later combination
         self.goal_output_gates = []
-        for goal_positions in self.parsed.blackwins:
+        for goal_positions in self.parsed_info["blackwins"]:
             # Retrieve variables representing the positions in the goal
             win_vars = [
                 self.position_states["black"][-1][self.parsed.positions.index(pos)]
@@ -428,9 +429,12 @@ class GoQBF:
         - Uses OR logic to combine the gates generated by `generate_goal_state`.
         """
 
-        # Combine all goal gates into a single final output gate
+        if not self.goal_output_gates:
+            raise ValueError("No goal gates generated.")
+
         self.final_output_gate = self.encoding_variables.get_vars(1)[0]
         self.gates_generator.or_gate(self.goal_output_gates + [self.final_output_gate])
+        self.encoding.append([self.final_output_gate])
 
     def verify_encoding(self):
         """
@@ -462,20 +466,31 @@ class GoQBF:
     def __init__(self, parsed):
 
         self.parsed = parsed
+        self.parsed_info = {}
+
+        self.parsed_info["blackinitials"] = self.parsed.parsed_dict["#blackinitials"]
+        self.parsed_info["whiteinitials"] = self.parsed.parsed_dict["#whiteinitials"]
+        self.parsed_info["times"] = self.parsed.parsed_dict["#times"]
+        self.parsed_info["blackturns"] = self.parsed.parsed_dict["#blackturns"]
+        self.parsed_info["blackwins"] = self.parsed.parsed_dict["#blackwins"]
+
         self.validate_parsed_input()
 
         self.encoding_variables = vd()
 
+        # Initialize encoding components
         self.quantifier_block = []
         self.encoding = []
+        self.existential_vars = []
+        self.universal_vars = []
         self.final_output_gate = 0
 
         # Gates generator
         self.gates_generator = ggen(self.encoding_variables, self.encoding)
 
         # Initialize board and position-related variables
-        self.num_positions = parsed.board_size**2
-        num_position_variables = self.num_positions * self.parsed.depth * 2
+        self.num_positions = parsed.num_positions
+        self.num_position_variables = self.num_positions * self.parsed.depth * 2
 
         # 3 per position : empty, black, white
         self.position_states = {"empty": [], "white": [], "black": []}
@@ -495,9 +510,10 @@ class GoQBF:
         )
 
         # Move variables (one per move)
-        self.move_variables = self.encode_variables(num_position_variables, 1)
+        self.move_variables = self.encode_variables(self.num_position_variables, 1)
 
         # Generate encoding components
+        self.generate_quantifier_blocks()
         self.encode_liberties()
         self.generate_initial_state()
         self.generate_transition_rules()
@@ -508,6 +524,8 @@ class GoQBF:
 
         # verifiy the completeness of the encodding
         self.verify_encoding()
+
+        self.print_encoding_tofile("./q_encodings/testFilesGo/qbf_encoding.qdimacs")
 
     def encode_variables(self, _range, _number_vars, add_to=None):
         "Helper function to encode a function"
@@ -526,38 +544,49 @@ class GoQBF:
     def print_encoding_tofile(self, file_path):
         """Function to print the encoding to a file"""
         with open(file_path, "w", encoding="utf-8") as f:
-            for gate in self.quantifier_block:
-                f.write(" ".join(gate) + "\n")
-            f.write(f"output({self.final_output_gate})\n")
-            for gate in self.encoding:
-                f.write(" ".join(map(str, gate)) + "\n")
+
+            # Write problem line
+            num_clauses = len(self.encoding)
+            self.num_variables = self.encoding_variables.__sizeof__()
+            f.write(f"p cnf {self.num_variables} {num_clauses}\n")
+
+            quantifiers = []
+            # Write quantifier blocks
+            if hasattr(self, "existential_vars") and self.existential_vars:
+                quantifiers.extend([f"e {var} 0\n" for var in self.existential_vars])
 
 
-class ParsedTmp:
-    """Class to store the parsed input for the GoQBF class"""
+            if hasattr(self, "universal_vars") and self.universal_vars:
+                quantifiers.extend([f"a {var} 0\n" for var in self.universal_vars])
+            
+            quantifiers_sorted = sorted(quantifiers, key=lambda x: int(x[2:4]))
 
-    def __init__(
-        self,
-        board_size,
-        depth,
-        initial_black_positions,
-        initial_white_positions,
-        goal_positions,
-    ):
-        self.board_size = board_size
-        self.depth = depth
-        self.initial_black_positions = initial_black_positions
-        self.initial_white_positions = initial_white_positions
-        self.goal_positions = goal_positions
+            f.write("".join(quantifiers_sorted))
+            # Write CNF clauses
+            clauses = gates_to_clauses(self.encoding)
+            for clause in clauses:
+                f.write(" ".join(map(str, clause)) + " 0\n")
 
 
-_parsed = ParsedTmp(
-    board_size=3,
-    depth=3,
-    initial_black_positions=[0],
-    initial_white_positions=[],
-    goal_positions=[0],
-)
+def gates_to_clauses(gates):
+    """Converts a list of gates to a list of CNF clauses."""
+    clauses = []
+    for gate in gates:
+        if len(gate) == 1:
+            clauses.append(gate)
+            continue
 
-go_qbf = GoQBF(_parsed)
-go_qbf.print_encoding_tofile("go_game.qbf")
+        gate_type, output_var, input_vars = gate
+        if gate_type == "and":
+            # AND gate: y ↔ (x1 ∧ x2)
+            clauses.append([-x for x in input_vars] + [output_var])  # -x1 -x2 y
+            for x in input_vars:
+                clauses.append([x, -output_var])  # x1 → y
+        elif gate_type == "or":
+            # OR gate: y ↔ (x1 ∨ x2)
+            clauses.append([x for x in input_vars] + [-output_var])  # x1 x2 -y
+            for x in input_vars:
+                clauses.append([-x, output_var])  # -x1 → y
+        else:
+            raise ValueError(f"Unknown gate type: {gate_type}")
+    return clauses
