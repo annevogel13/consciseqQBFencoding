@@ -1,9 +1,7 @@
-# Anne Merel de Jong, 01.01.2025, St Gallen (CH)
-import math
-import sys
-import os
+""" Anne Merel de Jong, 01.2025, St Gallen (CH)
+"""
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import math
 from utils.gates import GatesGen as ggen
 from utils.variables_dispatcher import VarDispatcher as vd
 
@@ -14,10 +12,12 @@ rules to encode :
 3. Capturing stones 
 4. Ko rule (no repeating the previous board state) <-- avoid infinite loops
 
-!! can a encoding file have both blackwins and whitewins ? 
+!! can a encoding file have both blackwins and whitewins ? currently encoded only for black to win 
+
+TODO make a logical order for the function in the class GoQBF
+TODO check if it is possible to regroup attributes of the class GoQBF
 """
-#TODO make a logical order for the function in the class GoQBF
-#TODO check if it is possible to regroup attributes of the class GoQBF, grouping them in seperate objects 
+
 
 class GoQBF:
     """Class to encode the game of Go as a QBF
@@ -30,6 +30,78 @@ class GoQBF:
     5. Restrictred moves : restrict the moves to be only legal according to the rules of the game
     6. Final gate : conjunction of the initial state, transition functions and goal state
     """
+
+    def validate_parsed_input(self):
+        """
+        Validates the parsed input to ensure correctness and consistency.
+        Checks:
+        - blackinitials and whiteinitials: No overlap, valid positions.
+        - times: At least one time step and valid format.
+        - blackturns: Valid times and correct alternation logic.
+        - positions: No duplicates and valid format.
+        - blackwins : Valid positions and no overlap.
+        """
+
+        # Check positions
+        if hasattr(self.parsed, "positions"):
+            if len(self.parsed.positions) != len(set(self.parsed.positions)):
+                raise ValueError("Duplicate positions detected.")
+        else:
+            raise ValueError("Field 'positions' is missing.")
+
+        # Check blackinitials and whiteinitials
+        if hasattr(self.parsed, "blackinitials") and hasattr(
+            self.parsed, "whiteinitials"
+        ):
+            black_initials = set(self.parsed.blackinitials)
+            white_initials = set(self.parsed.whiteinitials)
+            # the set intersection operator
+            overlap = black_initials & white_initials
+            if overlap:
+                raise ValueError(
+                    f"Overlap detected between blackinitials and whiteinitials: {overlap}"
+                )
+
+            invalid_black_initials = black_initials - set(self.parsed.positions)
+            invalid_white_initials = white_initials - set(self.parsed.positions)
+            if invalid_black_initials:
+                raise ValueError(
+                    f"Invalid blackinitials not in positions: {invalid_black_initials}"
+                )
+            if invalid_white_initials:
+                raise ValueError(
+                    f"Invalid whiteinitials not in positions: {invalid_white_initials}"
+                )
+
+        # Check times
+        if hasattr(self.parsed, "times"):
+            if not self.parsed.times:
+                raise ValueError("No times provided.")
+            if len(self.parsed.times) < 1:
+                raise ValueError("At least one time step is required.")
+        else:
+            raise ValueError("Field 'times' is missing.")
+
+        # Check blackturns
+        if hasattr(self.parsed, "blackturns"):
+            # - is the set operator for difference
+            invalid_black_turns = set(self.parsed.blackturns) - set(self.parsed.times)
+            if invalid_black_turns:
+                raise ValueError(
+                    f"Invalid blackturns not in times: {invalid_black_turns}"
+                )
+        else:
+            raise ValueError("Field 'blackturns' is missing.")
+
+        # Check if 'blackwins' exists
+        if not hasattr(self.parsed, "blackwins"):
+            raise ValueError("Field 'blackwins' is missing in the parsed input.")
+
+        # Validate each win condition
+        for win_condition in self.parsed.blackwins:
+            invalid_positions = set(win_condition) - set(self.parsed.positions)
+            if invalid_positions:
+                raise ValueError(f"Invalid positions in blackwins: {invalid_positions}")
 
     def at_most_one_formula(self, variables):
         """
@@ -54,38 +126,35 @@ class GoQBF:
         """
 
         # 1. move variables
-        self.quantifier_blocks.append(["# Move variables: "])
-        for i in range(self.parsed.depth):
-            self.quantifier_blocks.append(self.move_variables[i])
+        self.quantifier_block.append(["# Move variables: "])
+        for t in range(self.parsed.depth):
+            self.quantifier_block.append(self.move_variables[t])
 
         # 2. position variables (3 per position)
-        self.quantifier_blocks.append(["# Position variables: "])
-        for pos in range(self.num_positions):
-            self.quantifier_blocks.append(
-                [
-                    "exists("
-                    + ", ".join(str(x) for x in self.position_variables[pos])
-                    + ")"
-                ]
+        self.quantifier_block.append(["# Position variables: "])
+        for state in ["black", "white", "empty"]:
+            for t in range(self.parsed.depth):
+                self.quantifier_block.append(
+                    [
+                        "exists("
+                        + ", ".join(str(x) for x in self.position_states[state][t])
+                        + ")"
+                    ]
+                )
+
+        # 3. Liberty variables (empty adjacent positions) for each position:
+        self.quantifier_block.append(["# Liberty variables: "])
+        for t in range(self.parsed.depth):
+            self.quantifier_block.append(
+                ["exists(" + ", ".join(str(x) for x in self.liberty_variables[t]) + ")"]
             )
 
-        # Liberty variables (empty adjacent positions) for each position:
-        self.quantifier_blocks.append(["# Liberty variables: "])
-        for pos in range(self.num_positions):
-            self.quantifier_blocks.append(
-                [
-                    "exists("
-                    + ", ".join(str(x) for x in self.liberty_variables[pos])
-                    + ")"
-                ]
-            )
-
-        # State transition variables:
-        self.quantifier_blocks.append(["# State transitions: "])
-        self.encode_variables(self.num_positions, 1, self.quantifier_blocks)
+        # 4. State transition variables:
+        self.quantifier_block.append(["# State transitions: "])
+        self.encode_variables(self.num_positions, 1, self.quantifier_block)
 
         if self.parsed.args.debug == 1:
-            print("Quantifier blocks: ", self.quantifier_blocks)
+            print("Quantifier blocks: ", self.quantifier_block)
 
     def get_adjacent_positions(self, pos):
         """
@@ -108,64 +177,110 @@ class GoQBF:
 
         return adjacent
 
+    def find_group(self, t, start_pos, visited):
+        """
+        Identifies the connected group of stones starting at `start_pos`.
+        Returns:
+        - group: Set of positions in the group.
+        - group_color: Color of the stones in the group ("black" or "white").
+        """
+        # TODO critical point -> if this function fails it will all fail
+        queue = [start_pos]
+        group = set()
+        group_color = None
+
+        while queue:
+            pos = queue.pop()
+            if pos in visited:
+                continue
+            visited.add(pos)
+            group.add(pos)
+
+            # Determine the color of the group
+            if not group_color:
+                if self.position_states["black"][t][pos]:
+                    group_color = "black"
+                elif self.position_states["white"][t][pos]:
+                    group_color = "white"
+
+            # Add adjacent stones of the same color to the group
+            adj_positions = self.get_adjacent_positions(pos)
+            for adj in adj_positions:
+                if adj not in visited and self.position_states[group_color][t][adj]:
+                    queue.append(adj)
+
+        return group, group_color
+
     def encode_liberties(self):
         """
         Encodes liberties for each position at each turn.
         A position's liberty is true if any of its adjacent positions are empty.
         """
-        for t in range(self.num_turns):
+        for t in range(self.parsed.depth):
+            # Track visited positions to identify groups
+            visited = set()
+
             for pos in range(self.num_positions):
-                # Get adjacent positions for the current position
-                adj_positions = self.get_adjacent_positions(pos)
+                # Skip positions already processed
+                if pos in visited:
+                    continue
 
-                # Get the "empty" state variables for the adjacent positions at turn t
-                adj_empty_vars = [
-                    self.position_states["empty"][t][adj] for adj in adj_positions
-                ]
+                # Identify the group starting at this position
+                group, group_color = self.find_group(t, pos, visited)
 
-                # Generate an OR gate for the adjacent empty variables
-                # Liberty is true if any adjacent position is empty
-                if adj_empty_vars:
-                    liberty_var = self.liberty_variables[t][pos]
-                    self.gates_generator.or_gate(adj_empty_vars + [liberty_var])
+                if group_color:
+                    # Calculate liberties for the group
+                    group_liberty_vars = []
+                    for group_pos in group:
+                        adj_positions = self.get_adjacent_positions(group_pos)
+                        adj_empty_vars = [
+                            self.position_states["empty"][t][adj]
+                            for adj in adj_positions
+                            if adj not in group
+                        ]
+                        group_liberty_vars.extend(adj_empty_vars)
 
-    #TODO add the t parameter 
+                    # Combine liberties into a single variable for the group
+                    if group_liberty_vars:
+                        liberty_var = self.liberty_variables[t][pos]
+                        self.gates_generator.or_gate(group_liberty_vars + [liberty_var])
+
     def encode_capture_rules(self, t):
         """
         Encodes capture rules for each position at each turn.
         A stone is captured if all its liberties are occupied by the opponent.
         """
-        for t in range(self.num_turns - 1):  # Capture happens between consecutive turns
-            for pos in range(self.num_positions):
-                # Liberty variable for this position at turn t
-                liberty_var = self.liberty_variables[t][pos]
 
-                # Capture rule for White
-                white_stone_var = self.position_states["white"][t][pos]
-                white_empty_next = self.position_states["empty"][t + 1][pos]
+        for pos in range(self.num_positions):
+            # Liberty variable for this position at turn t
+            liberty_var = self.liberty_variables[t][pos]
 
-                self.gates_generator.if_then_gate(
-                    -white_stone_var,  # If there is a White stone
-                    liberty_var,  # Then liberties must exist (or else it's captured)
-                )
+            # Capture rule for White
+            white_stone_var = self.position_states["white"][t][pos]
+            white_empty_next = self.position_states["empty"][t + 1][pos]
 
-                self.gates_generator.if_then_gate(
-                    -liberty_var,  # If no liberties exist
-                    white_empty_next,  # Then the position becomes empty
-                )
+            self.gates_generator.if_then_gate(
+                -white_stone_var,  # If there is a White stone
+                liberty_var,  # Then liberties must exist (or else it's captured)
+            )
 
-                # Capture rule for Black
-                black_stone_var = self.position_states["black"][t][pos]
-                black_empty_next = self.position_states["empty"][t + 1][pos]
-                self.gates_generator.if_then_gate(
-                    -black_stone_var,  # If there is a Black stone
-                    liberty_var,  # Then liberties must exist (or else it's captured)
-                )
+            self.gates_generator.if_then_gate(
+                -liberty_var,  # If no liberties exist
+                white_empty_next,  # Then the position becomes empty
+            )
 
-                self.gates_generator.if_then_gate(
-                    -liberty_var,  # If no liberties exist
-                    black_empty_next,  # Then the position becomes empty
-                )
+            # Capture rule for Black
+            black_stone_var = self.position_states["black"][t][pos]
+            black_empty_next = self.position_states["empty"][t + 1][pos]
+            self.gates_generator.if_then_gate(
+                -black_stone_var,  # If there is a Black stone
+                liberty_var,  # Then liberties must exist (or else it's captured)
+            )
+
+            self.gates_generator.if_then_gate(
+                -liberty_var,  # If no liberties exist
+                black_empty_next,  # Then the position becomes empty
+            )
 
     def generate_initial_state(self):
         """
@@ -176,6 +291,8 @@ class GoQBF:
         """
 
         initial_clauses = []
+
+        # Ensure that the initial positions are within the board size
 
         for pos in range(self.num_positions):
             if pos in self.parsed.initial_black_positions:
@@ -234,36 +351,40 @@ class GoQBF:
                     next_state,
                 )
 
-    #TODO check if this is the most efficient way of checking this 
+    def not_gate(self, var):
+        """
+        Encodes a NOT gate for the given variable.
+        """
+        self.gates_generator.and_gate([var, -var])
+
     def prevent_repeated_board_state(self, t):
-        '''
+        """
         Ko rule: Prevents repeating the previous board state.
-        '''
-        for k in range(t + 1):  # Compare with all previous turns
-            same_state_vars = []
-            for pos in range(self.num_positions):
-                # Compare Black stones
-                black_t = self.position_states["black"][k][pos]
-                black_t1 = self.position_states["black"][t + 1][pos]
-               # same_state_vars.append(self.gates_generator.iff_gate(black_t, black_t1))
+        """
 
-                # Compare White stones
-                white_t = self.position_states["white"][k][pos]
-                white_t1 = self.position_states["white"][t + 1][pos]
-               # same_state_vars.append(self.gates_generator.iff_gate(white_t, white_t1))
+        same_state_vars = []
+        for pos in range(self.num_positions):
+            for color in ["black", "white", "empty"]:
+                curr_var = self.position_states[color][t][pos]
+                next_var = self.position_states[color][t + 1][pos]
+                # TODO could be that we need complete_equiality_gate
+                self.gates_generator.single_equality_gate(curr_var, next_var)
 
-                # Compare Empty positions
-                empty_t = self.position_states["empty"][k][pos]
-                empty_t1 = self.position_states["empty"][t + 1][pos]
-              #  same_state_vars.append(self.gates_generator.iff_gate(empty_t, empty_t1))
+            # Generate equivalence for the position's state at k and t+1
+            equivalence_gate = self.encoding_variables.get_vars(1)[0]
+            self.gates_generator.single_equality_gate(curr_var, next_var)
+            same_state_vars.append(equivalence_gate)
 
-            # Combine all "same state" conditions for this comparison into a single gate
-            same_state_gate = self.encoding_variables.get_vars(1)[0]
-            self.gates_generator.and_gate(same_state_vars + [same_state_gate])
+        # Combine all equivalences for the board into a single "same state" gate
+        board_same_gate = self.encoding_variables.get_vars(1)[0]
+        self.gates_generator.and_gate(same_state_vars + [board_same_gate])
 
-            # Prevent the next state from matching this previous state
-            #self.gates_generator.not_gate(same_state_gate)
+        # Prevent the next state from matching this previous state
+        not_board_same_gate = self.encoding_variables.get_vars(1)[0]
+        self.not_gate(board_same_gate)
 
+        # Append the constraint to ensure the board state is not repeated
+        self.encoding.append(f"-{not_board_same_gate} 0")
 
     def generate_transition_rules(self):
         """
@@ -274,7 +395,7 @@ class GoQBF:
         - State retention
         - Ko Rule (prevent repeated board state)
         """
-        for t in range(self.num_turns - 1):
+        for t in range(self.parsed.depth - 1):
             self.encode_stone_placement(t)
             self.encode_capture_rules(t)
             self.encode_state_retention(t)
@@ -284,27 +405,15 @@ class GoQBF:
         """
         Encodes the goal state based on the parsed input.
         - If the goal depends on `#blackwins`, encode multiple conditions for Black to win.
-        - If the goal depends on `#whitewins`, encode multiple conditions for White to win.
-        """
 
-        # Determine which win condition to use
-        if hasattr(self.parsed, "blackwins"):
-            win_conditions = self.parsed.blackwins
-            state = "black"
-        elif hasattr(self.parsed, "whitewins"):
-            win_conditions = self.parsed.whitewins
-            state = "white"
-        else:
-            raise ValueError(
-                "Goal condition not defined: Add either `#blackwins` or `#whitewins`."
-            )
+        """
 
         # Process each win condition and store gates for later combination
         self.goal_output_gates = []
-        for goal_positions in win_conditions:
+        for goal_positions in self.parsed.blackwins:
             # Retrieve variables representing the positions in the goal
             win_vars = [
-                self.position_states[state][-1][self.parsed.positions.index(pos)]
+                self.position_states["black"][-1][self.parsed.positions.index(pos)]
                 for pos in goal_positions
             ]
 
@@ -318,72 +427,87 @@ class GoQBF:
         Combines all goal gates into a single final output gate.
         - Uses OR logic to combine the gates generated by `generate_goal_state`.
         """
-        if not hasattr(self, "goal_output_gates") or not self.goal_output_gates:
-            raise ValueError(
-                "No goal conditions have been generated. Call `generate_goal_state` first."
-            )
 
         # Combine all goal gates into a single final output gate
         self.final_output_gate = self.encoding_variables.get_vars(1)[0]
         self.gates_generator.or_gate(self.goal_output_gates + [self.final_output_gate])
 
+    def verify_encoding(self):
+        """
+        Verifies that all essential components of the QBF encoding are present.
+        - Checks: Initial state, transition rules, goal state, and final output gate.
+        """
+        missing_components = []
+
+        # Check initial state
+        if not self.encoding:
+            missing_components.append("Initial state encoding")
+
+        # Check goal state
+        if not hasattr(self, "goal_output_gates") or not self.goal_output_gates:
+            missing_components.append("Goal state")
+
+        # Check final output gate
+        if not self.final_output_gate:
+            missing_components.append("Final output gate")
+
+        # Raise error or log warnings
+        if missing_components:
+            raise ValueError(
+                f"The following components are missing in the encoding: {missing_components}"
+            )
+
+        print("Encoding verification passed successfully.")
+
     def __init__(self, parsed):
+
         self.parsed = parsed
+        self.validate_parsed_input()
+
         self.encoding_variables = vd()
 
         self.quantifier_block = []
         self.encoding = []
-        self.transition_step_output_gates = []
         self.final_output_gate = 0
+
         # Gates generator
         self.gates_generator = ggen(self.encoding_variables, self.encoding)
 
-        self.board_size = parsed.board_size
-        self.num_positions = self.board_size**2
-        self.num_turns = parsed.depth
-        self.num_position_variables = self.num_positions * self.num_turns * 2
-
-        self.num_position_variables = math.ceil(math.log2(self.num_positions))
+        # Initialize board and position-related variables
+        self.num_positions = parsed.board_size**2
+        num_position_variables = self.num_positions * self.parsed.depth * 2
 
         # 3 per position : empty, black, white
         self.position_states = {"empty": [], "white": [], "black": []}
         self.position_states["empty"] = self.encode_variables(
-            self.num_turns, self.num_positions
+            self.parsed.depth, self.num_positions
         )
         self.position_states["white"] = self.encode_variables(
-            self.num_turns, self.num_positions
+            self.parsed.depth, self.num_positions
         )
         self.position_states["black"] = self.encode_variables(
-            self.num_turns, self.num_positions
+            self.parsed.depth, self.num_positions
         )
-
-        self.captured_states = {
-            "white": self.encode_variables(self.num_turns, self.num_positions),
-            "black": self.encode_variables(self.num_turns, self.num_positions),
-        }
 
         # track liberties (empty adjacent positions) -> maximum of 4 per position
         self.liberty_variables = self.encode_variables(
-            self.num_turns, self.num_positions
+            self.parsed.depth, self.num_positions
         )
 
-        # update functions
-        self.encode_liberties()
-        #self.encode_capture_rules()
-
         # Move variables (one per move)
-        self.move_variables = self.encode_variables(self.num_position_variables, 1)
-
-        # Will be filled in the generate_quantifier_blocks function
-        self.quantifier_blocks = []
+        self.move_variables = self.encode_variables(num_position_variables, 1)
 
         # Generate encoding components
+        self.encode_liberties()
         self.generate_initial_state()
         self.generate_transition_rules()
         self.generate_goal_state()
 
         # Combine all components into the final gate
         self.generate_final_gate()
+
+        # verifiy the completeness of the encodding
+        self.verify_encoding()
 
     def encode_variables(self, _range, _number_vars, add_to=None):
         "Helper function to encode a function"
@@ -401,7 +525,7 @@ class GoQBF:
 
     def print_encoding_tofile(self, file_path):
         """Function to print the encoding to a file"""
-        with open(file_path, "w") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             for gate in self.quantifier_block:
                 f.write(" ".join(gate) + "\n")
             f.write(f"output({self.final_output_gate})\n")
