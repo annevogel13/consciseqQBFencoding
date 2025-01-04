@@ -1,0 +1,166 @@
+usage: Q-sage.py [-h] [-V] [--ib_domain IB_DOMAIN] [--ib_problem IB_PROBLEM]
+                 [--problem PROBLEM] [--planner_path PLANNER_PATH]
+                 [--depth DEPTH] [--xmax XMAX] [--ymax YMAX]
+                 [--ignore_file_depth IGNORE_FILE_DEPTH]
+                 [--ignore_file_boardsize IGNORE_FILE_BOARDSIZE] [-e E]
+                 [--game_type GAME_TYPE] [--goal_length GOAL_LENGTH]
+                 [--run RUN] [--encoding_format ENCODING_FORMAT]
+                 [--encoding_out ENCODING_OUT]
+                 [--intermediate_encoding_out INTERMEDIATE_ENCODING_OUT]
+                 [--certificate_out CERTIFICATE_OUT] [--solver SOLVER]
+                 [--solver_out SOLVER_OUT] [--debug DEBUG]
+                 [--run_tests RUN_TESTS] [--qcir_viz QCIR_VIZ]
+                 [--viz_testing VIZ_TESTING]
+                 [--viz_meta_data_out VIZ_META_DATA_OUT] [--seed SEED]
+                 [--renumber_positions RENUMBER_POSITIONS]
+                 [--restricted_position_constraints RESTRICTED_POSITION_CONSTRAINTS]
+                 [--black_move_restrictions BLACK_MOVE_RESTRICTIONS]
+                 [--black_overwriting_black_enable BLACK_OVERWRITING_BLACK_ENABLE]
+                 [--forall_move_restrictions FORALL_MOVE_RESTRICTIONS]
+                 [--remove_unreachable_nodes REMOVE_UNREACHABLE_NODES]
+                 [--tight_neighbour_pruning TIGHT_NEIGHBOUR_PRUNING]
+                 [--tight_neighbours_with_distances TIGHT_NEIGHBOURS_WITH_DISTANCES]
+                 [--force_black_player_stop FORCE_BLACK_PLAYER_STOP]
+                 [--force_white_player_stop FORCE_WHITE_PLAYER_STOP]
+                 [--force_white_player_invalid_or_stop FORCE_WHITE_PLAYER_INVALID_OR_STOP]
+                 [--sort_internal_gates SORT_INTERNAL_GATES]
+                 [--preprocessing PREPROCESSING]
+                 [--preprocessed_encoding_out PREPROCESSED_ENCODING_OUT]
+                 [--time_limit TIME_LIMIT]
+                 [--preprocessing_time_limit PREPROCESSING_TIME_LIMIT]
+
+A tool to generate ungrounded QBF encodings for 2-player positional games and computes winning statergy if requested.
+
+options:
+  -h, --help            show this help message and exit
+  -V, --version         show program version
+  --ib_domain IB_DOMAIN
+                         index based domain file path
+  --ib_problem IB_PROBLEM
+                         index based problem file path
+  --problem PROBLEM     problem file path
+  --planner_path PLANNER_PATH
+                        path for Q-sage.py, allowing remote run
+  --depth DEPTH         Depth, default 3
+  --xmax XMAX           xmax, default 4
+  --ymax YMAX           ymax, default 4
+  --ignore_file_depth IGNORE_FILE_DEPTH
+                        Ignore time stamps in input file and enforce user depth, default 0
+  --ignore_file_boardsize IGNORE_FILE_BOARDSIZE
+                        Ignore board size in input file and enforce user sizes, default 0
+  -e E                  
+                        encoding types:
+                        pg = path based goal (ungrounded)
+                        ibign = implicit board implicit goal nested (ungrounded)
+                        nt = nested traversal hex (semi-grounded)
+                        pgt = non-nested transversal (semi-grounded)
+                        cpg = compact path based goal (ungrounded)
+                        gg = grounded goal encoding
+                        ggt = grounded goal with time
+                        eg = explicit goal encoding
+                        ew = explicit goal witness based
+                        iw = iteratice squaring witness based
+                        ttt = tictactoe
+                        go = go
+                        cp = compact positional (ungrounded)
+                        cgcp = compact goal compact positional
+                        ntpg = path based goal, without transition function
+                        ib = index based (grid games)
+                        nib = nested index based (grid games)
+                        dnib = double nested index based (grid games)
+                        bwnib = black white nested index based (grid games)
+                        cfbwnib =bwnib with complete propagation (grid games)
+                        wgttt = witness based gttt)
+  --game_type GAME_TYPE
+                        
+                        games (for specific optimizations):
+                        hex = hex game
+                        ttt = tic-tac-toe
+                        go = go
+                        gomuku = gomuku
+                        general = general game, for index based (default)
+  --goal_length GOAL_LENGTH
+                        Goal line length for games such as tic-tac-toe and gomuku, default 3
+  --run RUN             
+                        Three levels of execution:
+                        0 = only generate encoding
+                        1 = existence of winning strategy
+                        2 = extract first step of winning strategy if found
+  --encoding_format ENCODING_FORMAT
+                        
+                        Encoding format:
+                        1 = QCIR14
+                        2 = QDIMACS (default)
+                        3 = DQCIR
+                        4 = DQDIMACS
+                        5 = QDIMACS-moved
+  --encoding_out ENCODING_OUT
+                        output encoding file
+  --intermediate_encoding_out INTERMEDIATE_ENCODING_OUT
+                        output intermediate encoding file
+  --certificate_out CERTIFICATE_OUT
+                        certificate file path
+  --solver SOLVER       
+                        Solver:
+                        1 = quabs
+                        2 = CAQE (default)
+                        3 = RaReQS
+                        4 = Pedant
+                        5 = DepQBF-qrp-cert (for now, main focus on certificate generation)
+                        6 = DepQBF
+  --solver_out SOLVER_OUT
+                        solver output file
+  --debug DEBUG         [0/1], default 0
+  --run_tests RUN_TESTS
+                        [0/1], default 0
+  --qcir_viz QCIR_VIZ   visualize the circuit encoding, default 0
+  --viz_testing VIZ_TESTING
+                        vizual testing with certificate generation for general games (for now pedant)  [0/1], default 0
+  --viz_meta_data_out VIZ_META_DATA_OUT
+                        visual testing meta data (input and vars) file path
+  --seed SEED           seed value for random generater for testing (default 0)
+  --renumber_positions RENUMBER_POSITIONS
+                        
+                        renumber positions for tighter lessthan constraints:
+                        0 = None
+                        1 = renumber open position to the front
+                        2 = extra equality clauses for the transformed board with only open positions (default 0)
+  --restricted_position_constraints RESTRICTED_POSITION_CONSTRAINTS
+                        [0/1], default 0
+  --black_move_restrictions BLACK_MOVE_RESTRICTIONS
+                        [0/1], default 1
+  --black_overwriting_black_enable BLACK_OVERWRITING_BLACK_ENABLE
+                         for witness encoding (compact positional) we can either allow black overwriting itself or not [0/1], default 1
+  --forall_move_restrictions FORALL_MOVE_RESTRICTIONS
+                        
+                        in = let forall restrictions in each if condition
+                        out = forall restrictions outside the transition functions
+                        none = no restrictions (default)
+  --remove_unreachable_nodes REMOVE_UNREACHABLE_NODES
+                        [0/1], default 0
+  --tight_neighbour_pruning TIGHT_NEIGHBOUR_PRUNING
+                        [0/1], default 0
+  --tight_neighbours_with_distances TIGHT_NEIGHBOURS_WITH_DISTANCES
+                        computer tight neighbours with distances, less powerful but also less overhead [0/1], default 0
+  --force_black_player_stop FORCE_BLACK_PLAYER_STOP
+                        [0/1], default 0 once black player stops the game, rest of the predicates are propagated
+  --force_white_player_stop FORCE_WHITE_PLAYER_STOP
+                        [0/1], default 0 once white player stops the game, rest of the predicates are propagated
+  --force_white_player_invalid_or_stop FORCE_WHITE_PLAYER_INVALID_OR_STOP
+                        [0/1], default 0 once white player stops the game or makes invalid move, rest of the predicates are propagated
+  --sort_internal_gates SORT_INTERNAL_GATES
+                        [0/1], default 0 by sorting we create unique gates might be helpful
+  --preprocessing PREPROCESSING
+                        
+                        Preprocessing:
+                        0 = off
+                        1 = bloqqer (version 37)
+                        2 = bloqqer-qdo
+                        3 = hqspre
+                        4 = qrat+
+  --preprocessed_encoding_out PREPROCESSED_ENCODING_OUT
+                        output preprocessed encoding file
+  --time_limit TIME_LIMIT
+                        Solving time limit in seconds, default 1800 seconds
+  --preprocessing_time_limit PREPROCESSING_TIME_LIMIT
+                        Preprocessing time limit in seconds, default 900 seconds

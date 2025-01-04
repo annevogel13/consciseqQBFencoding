@@ -411,6 +411,14 @@ class GoQBF:
 
         # Process each win condition and store gates for later combination
         self.goal_output_gates = []
+
+        self.encoding.append(
+            [
+                "# ------------------------------------------------------------------------"
+            ]
+        )
+        
+        self.encoding.append("# Goal state : ")
         for goal_positions in self.parsed_info["blackwins"]:
             # Retrieve variables representing the positions in the goal
             win_vars = [
@@ -418,8 +426,8 @@ class GoQBF:
                 for pos in goal_positions
             ]
 
+            self.encoding.append(["# Final and gate for goal constraints: "])
             # Create an AND gate for the current win condition
-            goal_gate = self.encoding_variables.get_vars(1)[0]
             self.gates_generator.and_gate(win_vars + [goal_gate])
             self.goal_output_gates.append(goal_gate)
 
@@ -514,9 +522,9 @@ class GoQBF:
 
         # Generate encoding components
         self.generate_quantifier_blocks()
-        self.encode_liberties()
+        # self.encode_liberties()
         self.generate_initial_state()
-        self.generate_transition_rules()
+        # self.generate_transition_rules()
         self.generate_goal_state()
 
         # Combine all components into the final gate
@@ -544,7 +552,7 @@ class GoQBF:
     def print_encoding_tofile(self, file_path):
         """Function to print the encoding to a file"""
         with open(file_path, "w", encoding="utf-8") as f:
-
+            f.write("# QCIR Output")
             # Write problem line
             num_clauses = len(self.encoding)
             self.num_variables = self.encoding_variables.__sizeof__()
@@ -553,12 +561,11 @@ class GoQBF:
             quantifiers = []
             # Write quantifier blocks
             if hasattr(self, "existential_vars") and self.existential_vars:
-                quantifiers.extend([f"e {var} 0\n" for var in self.existential_vars])
-
+                quantifiers.extend([f" {var} 0\n" for var in self.existential_vars])
 
             if hasattr(self, "universal_vars") and self.universal_vars:
                 quantifiers.extend([f"a {var} 0\n" for var in self.universal_vars])
-            
+
             quantifiers_sorted = sorted(quantifiers, key=lambda x: int(x[2:4]))
 
             f.write("".join(quantifiers_sorted))

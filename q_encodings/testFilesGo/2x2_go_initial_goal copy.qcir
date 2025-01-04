@@ -1,0 +1,69 @@
+# QCIR Encoding for a 2x2 board with two white stones and two black stones
+# Quantifiers
+exists(b_a11, b_a12, c_a1, b_a21, b_a22, c_a2, b_b11, b_b12, c_b1, b_b21, b_b22, c_b2)
+# Each position must be occupied by one stone
+stone1_a1 = and(not(b_a11), not(b_a12))  # Stone S1
+stone2_a1 = and(not(b_a11), b_a12)       # Stone S2
+stone3_a1 = and(b_a11, not(b_a12))       # Stone S3
+stone4_a1 = and(b_a11, b_a12)            # Stone S4
+p_a1 = or(stone1_a1, stone2_a1, stone3_a1, stone4_a1)
+stone1_a2 = and(not(b_a21), not(b_a22))  # Stone S1
+stone2_a2 = and(not(b_a21), b_a22)       # Stone S2
+stone3_a2 = and(b_a21, not(b_a22))       # Stone S3
+stone4_a2 = and(b_a21, b_a22)            # Stone S4
+p_a2 = or(stone1_a2, stone2_a2, stone3_a2, stone4_a2)
+stone1_b1 = and(not(b_b11), not(b_b12))  # Stone S1
+stone2_b1 = and(not(b_b11), b_b12)       # Stone S2
+stone3_b1 = and(b_b11, not(b_b12))       # Stone S3
+stone4_b1 = and(b_b11, b_b12)            # Stone S4
+p_b1 = or(stone1_b1, stone2_b1, stone3_b1, stone4_b1)
+stone1_b2 = and(not(b_b21), not(b_b22))  # Stone S1
+stone2_b2 = and(not(b_b21), b_b22)       # Stone S2
+stone3_b2 = and(b_b21, not(b_b22))       # Stone S3
+stone4_b2 = and(b_b21, b_b22)            # Stone S4
+p_b2 = or(stone1_b2, stone2_b2, stone3_b2, stone4_b2)
+# Color constraints for each position
+color_a1 = or(
+  and(stone1_a1, not(c_a1)),  # S1 is white
+  and(stone2_a1, not(c_a1)),  # S2 is white
+  and(stone3_a1, c_a1),       # S3 is black
+  and(stone4_a1, c_a1)        # S4 is black
+)
+color_a2 = or(
+  and(stone1_a2, not(c_a2)),  # S1 is white
+  and(stone2_a2, not(c_a2)),  # S2 is white
+  and(stone3_a2, c_a2),       # S3 is black
+  and(stone4_a2, c_a2)        # S4 is black
+)
+color_b1 = or(
+  and(stone1_b1, not(c_b1)),  # S1 is white
+  and(stone2_b1, not(c_b1)),  # S2 is white
+  and(stone3_b1, c_b1),       # S3 is black
+  and(stone4_b1, c_b1)        # S4 is black
+)
+color_b2 = or(
+  and(stone1_b2, not(c_b2)),  # S1 is white
+  and(stone2_b2, not(c_b2)),  # S2 is white
+  and(stone3_b2, c_b2),       # S3 is black
+  and(stone4_b2, c_b2)        # S4 is black
+)
+# Global constraints: exactly two white stones and two black stones
+white_count = sum(
+  not(c_a1), not(c_a2), not(c_b1), not(c_b2)  # Count white stones
+)
+assert(white_count == 2)
+black_count = sum(
+  c_a1, c_a2, c_b1, c_b2  # Count black stones
+)
+assert(black_count == 2)
+# Uniqueness constraints: no two positions have the same stone
+not_same_a1_a2 = not(and(b_a11 == b_a21, b_a12 == b_a22))
+not_same_a1_b1 = not(and(b_a11 == b_b11, b_a12 == b_b12))
+not_same_a1_b2 = not(and(b_a11 == b_b21, b_a12 == b_b22))
+not_same_a2_b1 = not(and(b_a21 == b_b11, b_a22 == b_b12))
+not_same_a2_b2 = not(and(b_a21 == b_b21, b_a22 == b_b22))
+not_same_b1_b2 = not(and(b_b11 == b_b21, b_b12 == b_b22))
+# Combine all constraints
+all_positions = and(p_a1, p_a2, p_b1, p_b2)
+unique_stones = and(not_same_a1_a2, not_same_a1_b1, not_same_a1_b2, not_same_a2_b1, not_same_a2_b2, not_same_b1_b2)
+output = and(all_positions, color_a1, color_a2, color_b1, color_b2, white_count, black_count, unique_stones)

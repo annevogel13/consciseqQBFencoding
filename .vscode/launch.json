@@ -1,20 +1,89 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "debugpy",
-            "request": "launch",
-            "name": "Debug GO with Q-sage",
-            "program": "${workspaceFolder}/Q-sage.py",
-            "args": [
-              "-e", "go",
-              "--game_type", "go",
-              "--run", "0",
-              "--problem", "./testcases/Go/2x2_go.pg"
-            ]
-          }
-    ]
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "Debug GO with Q-sage",
+      "program": "${workspaceFolder}/Q-sage.py",
+      "args": [
+        "-e",
+        "go",
+        "--game_type",
+        "go",
+        "--run",
+        "0",
+        "--problem",
+        "./testcases/Go/2x2_go.pg",
+        "--encoding_format",
+        "1",
+      ]
+    },
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "Debug QCIR to qdmics",
+      "program": "${workspaceFolder}/utils/qcir_to_qdimacs_transformer.py",
+      "args": [
+        "--input_file",
+        "${workspaceFolder}/q_encodings/testFilesGo/2x2_go_initial_goal.qcir",
+        "--output_file",
+        "${workspaceFolder}/q_encodings/testFilesGo/2x2_go_initial_goal.qdimacs"
+      ]
+    },
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "Debug TTT QCIR to qdmics",
+      "program": "${workspaceFolder}/utils/qcir_to_qdimacs_transformer.py",
+      "args": [
+        "--input_file",
+        "${workspaceFolder}/Benchmarks/SAT2023_GDDL/QBF_instances/httt/3x3_5_el_bwnib.qcir",
+        "--output_file",
+        "${workspaceFolder}/q_encodings/testFilesGo/htt.qdmics"
+      ]
+    },
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "hexapwan",
+      "program": "${workspaceFolder}/Q-sage.py",
+      "args": [
+        "--game_type",
+        "general",
+        "-e",
+        "ib",
+        "--ib_domain",
+        "${workspaceFolder}/q_encodings/hexapawn/domain.ig",
+        "--ib_problem",
+        "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan.ig",
+        "--encoding_out",
+        "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan.qcir",
+        "--run", "2",
+      ]
+    },
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "hexapwan no legal moves",
+      "program": "${workspaceFolder}/Q-sage.py",
+      "args": [
+        "--game_type",
+        "general",
+        "-e",
+        "ib",
+        "--ib_domain",
+        "${workspaceFolder}/q_encodings/hexapawn/domain.ig",
+        "--ib_problem",
+        "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan_no_legal_moves.ig",
+        "--encoding_out",
+        "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan_no_legal_moves.qcir",
+        "--run", "2",
+      ]
+    },
+
+  ]
 }
