@@ -68,7 +68,7 @@
     {
       "type": "debugpy",
       "request": "launch",
-      "name": "hexapwan no legal moves",
+      "name": "hexapwan domain2",
       "program": "${workspaceFolder}/Q-sage.py",
       "args": [
         "--game_type",
@@ -76,12 +76,12 @@
         "-e",
         "ib",
         "--ib_domain",
-        "${workspaceFolder}/q_encodings/hexapawn/domain.ig",
+        "${workspaceFolder}/q_encodings/hexapawn/domain2.ig",
         "--ib_problem",
-        "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan_no_legal_moves.ig",
+        "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan.ig",
         "--encoding_out",
         "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan_no_legal_moves.qcir",
-        "--run", "2",
+        "--run", "1",
       ]
     },
 

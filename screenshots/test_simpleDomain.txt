@@ -1,0 +1,20 @@
+annemerel@Cloudchaser:~/consciseqQBFencoding$ python Q-sage.py --ib_problem hexapawn/3x3_hexapwan.ig --ib_domain hexapawn/domain2.ig -e ib --game_type general --run 2 --encoding_out intermediate_files/encoding/hexapwan.txt
+\Start time: 2025-02-04 10:38:49.589072
+Git commit hash: b'6129823'
+Namespace(version=False, ib_domain='hexapawn/domain2.ig', ib_problem='hexapawn/3x3_hexapwan.ig', problem='testcases/winning_testcases_ungrounded_new_boards/hein_04_3x3-05.pg', planner_path='/home/annemerel/consciseqQBFencoding', depth=3, xmax=4, ymax=4, ignore_file_depth=0, ignore_file_boardsize=0, e='ib', game_type='general', goal_length=3, run=2, encoding_format=2, encoding_out='intermediate_files/encoding/hexapwan.txt', intermediate_encoding_out='intermediate_files/intermediate_encoding', certificate_out='intermediate_files/certificate', solver=2, solver_out='intermediate_files/solver_output', debug=0, run_tests=0, qcir_viz=0, viz_testing=0, viz_meta_data_out='intermediate_files/viz_meta_out', seed=0, renumber_positions=0, restricted_position_constraints=0, black_move_restrictions=1, black_overwriting_black_enable=1, forall_move_restrictions='none', remove_unreachable_nodes=0, tight_neighbour_pruning=0, tight_neighbours_with_distances=0, force_black_player_stop=0, force_white_player_stop=0, force_white_player_invalid_or_stop=0, sort_internal_gates=0, preprocessing=2, preprocessed_encoding_out='intermediate_files/preprocessed_encoding', time_limit=1800, preprocessing_time_limit=900)
+Generating General game encoding
+Encoding time: 0.031117101000745606
+c CommonSolverConfig { filename: Some("intermediate_files/encoding/hexapwan.txt"), verbosity: Warn, statistics: None, specific: CaqeSpecificSolverConfig { options: SolverOptions { abstraction: AbstractionOptions { reuse_b_literals: Some(Partial), reuse_t_literals: Some(Partial), additional_t_literal_constraints: Some(Partial), additional_b_literal_constraints: false, equivalence_constraints: true, universal_reuse_b_literals: true, replace_t_literal_by_variable: true }, expansion: ExpansionOptions { expansion_refinement: Some(Full), dependency_schemes: false, conflict_clause_expansion: true, hamming_heuristics: false }, strong_unsat_refinement: false, refinement_literal_subsumption: false, miniscoping: true, build_conflict_clauses: false, flip_assignments_from_sat_solver: false, skip_levels: None }, qdimacs_output: true, preprocessor: Some(Bloqqer) } }
+s cnf 1 152 404
+V -1 0
+V -2 0
+V 3 0
+V 4 0
+V -5 0
+c Satisfiable
+Plan found
+First winning move: forward(1,2)
+Solving time: 0.029823861999830115
+
+Encoding size (in KB): 4.92
+Finish time: 2025-02-04 10:38:49.650371
