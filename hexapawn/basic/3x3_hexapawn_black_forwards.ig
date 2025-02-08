@@ -1,3 +1,4 @@
+% python Q-sage.py --ib_problem hexapawn/basic/3x3_hexapawn_black_diag_forwards.ig -e ib --game_type general --run 2 --encoding_out intermediate_files/encoding/hexapawn.txt --ib_domain hexapawn/basic/domain.ig
 %   y
 %   3   b   -   b 
 %   2   -   -   - 
