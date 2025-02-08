@@ -1,14 +1,19 @@
-%   y           
-%   2         
-%   1   w      
-%       1   x
+
+% python Q-sage.py --ib_problem hexapawn/3x3_hexapwan_no_legal_moves.ig -e ib --game_type general --run 2 --encoding_out intermediate_files/encoding/hexapawn.txt --ib_domain hexapawn/domain.ig
+%   y
+%   3   -   b   -            
+%   2   b   w   b         
+%   1   w   -   w      
+%       1   2   3   x
 #boardsize
-2 3
+3 3
 #depth
-5
+3
+#times
+t1 t2 t3
 #init
-(black(1,3))
+(black(1,2) black(2,3) black(3,2) white(1,1) white(2,2) white(3,1))
 #blackgoal
-(black(1,3))
+(black(?x,1))
 #whitegoal
-(white(1,2))
+(white(?x,3))
