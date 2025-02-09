@@ -61,7 +61,6 @@ options:
                         ew = explicit goal witness based
                         iw = iteratice squaring witness based
                         ttt = tictactoe
-                        go = go
                         cp = compact positional (ungrounded)
                         cgcp = compact goal compact positional
                         ntpg = path based goal, without transition function
@@ -70,13 +69,12 @@ options:
                         dnib = double nested index based (grid games)
                         bwnib = black white nested index based (grid games)
                         cfbwnib =bwnib with complete propagation (grid games)
-                        wgttt = witness based gttt)
+                        wgttt = witness based (gttt)
   --game_type GAME_TYPE
                         
                         games (for specific optimizations):
                         hex = hex game
                         ttt = tic-tac-toe
-                        go = go
                         gomuku = gomuku
                         general = general game, for index based (default)
   --goal_length GOAL_LENGTH

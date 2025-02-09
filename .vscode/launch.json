@@ -62,7 +62,8 @@
         "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan.ig",
         "--encoding_out",
         "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan.qcir",
-        "--run", "2",
+        "--run",
+        "2",
       ]
     },
     {
@@ -81,9 +82,29 @@
         "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan.ig",
         "--encoding_out",
         "${workspaceFolder}/q_encodings/hexapawn/3x3_hexapwan_no_legal_moves.qcir",
-        "--run", "1",
+        "--run",
+        "1",
       ]
     },
-
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "N Queens",
+      "program": "${workspaceFolder}/Q-sage.py",
+      "args": [
+        "--game_type",
+        "general",
+        "-e",
+        "ib",
+        "--ib_domain",
+        "${workspaceFolder}/NQueens/domain.ig",
+        "--ib_problem",
+        "${workspaceFolder}/NQueens/4x4_4Queens.ig",
+        "--encoding_out",
+        "${workspaceFolder}/intermediate_files/encoding/4x4_n_queens.txt",
+        "--run",
+        "2",
+      ]
+    },
   ]
 }
