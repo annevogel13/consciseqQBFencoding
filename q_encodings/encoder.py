@@ -29,7 +29,7 @@ from q_encodings.implicit_board_implicit_goal_nested import ImplicitBoardImplici
 from q_encodings.nested_traversal import NestedTraversal as nt
 from q_encodings.pg_transversal import PGTransversal as pgt
 from q_encodings.tictactoe import TicTacToe as ttt
-from q_encodings.go import GoQBF as go 
+
 
 def add_dependencies_to_qdimacs(parsed_instance, encoding):
   # Read the encoding file:
@@ -152,10 +152,6 @@ def generate_encoding(parsed_instance):
     if (parsed_instance.args.debug > -1):
       print("Generating no transition path based goal encoding")
     encoding = ntpbg(parsed_instance)
-  elif(parsed_instance.args.e == 'go' and parsed_instance.args.game_type == "go"): # newly added by Merel
-    if (parsed_instance.args.debug > -1):
-      print("Generating Go QBF encoding")
-    encoding = go(parsed_instance)
 
   # We print QCIR format directly to the file:
   if (parsed_instance.args.encoding_format == 1 ):

@@ -1,5 +1,5 @@
 """ Anne Merel de Jong, 01.2025, St Gallen (CH)
-"""
+
 
 import math
 import numpy as np
@@ -597,3 +597,4 @@ def gates_to_clauses(gates):
         else:
             raise ValueError(f"Unknown gate type: {gate_type}")
     return clauses
+"""

@@ -13,6 +13,6 @@ t1 t3
 #init
 black(3,2) black(2,3) 
 #blackgoal
-(black(3,2) black(2,3) black(3,4) )
+(black(3,2) black(2,3) black(3,4) not(black(1,1)))
 #whitegoal
 white(3,2)
